@@ -1,0 +1,2424 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ICARUS-9 — Predictive Extinction Dossier</title>
+
+    <style>
+      :root {
+        --bg: #031311;
+        --panel: #062420;
+        --ink: #0a3a33;
+        --dim: #12665a;
+        --mid: #2bbfae;
+        --hi: #3be8d8;
+        --hot: #9ffff5;
+        --txt: #c9ece6;
+        --warn: #ffd23b;
+        --red: #ff5c74;
+        --px: 4px;
+      }
+
+      @font-face {
+        font-family: "Press Start 2P";
+        src: url("PressStart2P-Regular.ttf") format("truetype");
+        font-weight: normal;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      /* Example usage */
+      body {
+        font-family: "Press Start 2P", monospace;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        background: var(--bg);
+        color: var(--txt);
+        font-family: "VT323", monospace;
+        font-size: 20px;
+        overflow-x: hidden;
+      }
+      ::selection {
+        background: var(--hi);
+        color: var(--bg);
+      }
+      canvas,
+      svg,
+      img {
+        image-rendering: pixelated;
+      }
+      h1,
+      h2,
+      h3,
+      .pixel {
+        font-family: "Press Start 2P", monospace;
+        line-height: 1.6;
+      }
+
+      /* ---------- CRT overlay (light, keeps text readable) ---------- */
+      .crt {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 90;
+        background: repeating-linear-gradient(
+          0deg,
+          rgba(0, 0, 0, 0.1) 0px,
+          rgba(0, 0, 0, 0.1) 1px,
+          transparent 1px,
+          transparent 4px
+        );
+      }
+      .crt::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          ellipse at center,
+          transparent 60%,
+          rgba(0, 10, 8, 0.5) 100%
+        );
+      }
+
+      #city {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+        opacity: 0.5;
+      }
+
+      /* ---------- HUD ---------- */
+      #hud {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 80;
+        background: #031311;
+        border-bottom: var(--px) solid var(--ink);
+        padding: 10px 16px 8px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      #hud .tag {
+        font-family: "Press Start 2P", monospace;
+        font-size: 8px;
+        color: var(--dim);
+      }
+      #hud .file {
+        font-family: "Press Start 2P", monospace;
+        font-size: 8px;
+        color: var(--hi);
+      }
+      #hud .year {
+        font-family: "Press Start 2P", monospace;
+        font-size: 13px;
+        color: var(--hot);
+        min-width: 70px;
+        text-shadow: 0 0 8px rgba(59, 232, 216, 0.8);
+      }
+      #meter {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-left: auto;
+      }
+      #meter .lbl {
+        font-family: "Press Start 2P", monospace;
+        font-size: 7px;
+        color: var(--dim);
+      }
+      #cells {
+        display: flex;
+        gap: 2px;
+      }
+      #cells i {
+        width: 8px;
+        height: 13px;
+        background: var(--ink);
+        display: block;
+      }
+      #cells i.on {
+        background: var(--hi);
+        box-shadow: 0 0 4px var(--hi);
+      }
+      #cells i.on.warn {
+        background: var(--warn);
+        box-shadow: 0 0 4px var(--warn);
+      }
+      #cells i.on.red {
+        background: var(--red);
+        box-shadow: 0 0 5px var(--red);
+      }
+      #pct {
+        font-family: "Press Start 2P", monospace;
+        font-size: 10px;
+        color: var(--hi);
+        min-width: 58px;
+        text-align: right;
+      }
+      #pct.warn {
+        color: var(--warn);
+      }
+      #pct.red {
+        color: var(--red);
+      }
+      #topbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 3px;
+        background: var(--hi);
+        z-index: 85;
+        width: 0;
+        display: none;
+      }
+
+      main {
+        position: relative;
+        z-index: 10;
+      }
+
+      /* ---------- hero ---------- */
+      #hero {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 120px 20px 60px;
+      }
+      #hero h1 {
+        font-size: clamp(15px, 3.6vw, 26px);
+        color: var(--hot);
+        text-shadow: 0 0 12px rgba(59, 232, 216, 0.6);
+      }
+      #hero h1 .r {
+        color: var(--red);
+        text-shadow: 0 0 12px rgba(255, 92, 116, 0.8);
+        animation: flick 3.4s infinite steps(1);
+      }
+      @keyframes flick {
+        0%,
+        92% {
+          opacity: 1;
+        }
+        93%,
+        95% {
+          opacity: 0.25;
+        }
+        96%,
+        100% {
+          opacity: 1;
+        }
+      }
+      #hero .sub {
+        margin-top: 26px;
+        font-size: 21px;
+        color: var(--mid);
+        max-width: 620px;
+        line-height: 1.5;
+      }
+      #hero .stamp {
+        margin-top: 36px;
+        font-family: "Press Start 2P", monospace;
+        font-size: 9px;
+        border: var(--px) solid var(--red);
+        color: var(--red);
+        padding: 10px 16px;
+        transform: rotate(-2deg);
+        letter-spacing: 2px;
+        box-shadow:
+          0 0 14px rgba(255, 92, 116, 0.25),
+          inset 0 0 14px rgba(255, 92, 116, 0.12);
+      }
+      #hero .hint {
+        margin-top: 70px;
+        font-family: "Press Start 2P", monospace;
+        font-size: 8px;
+        color: var(--dim);
+      }
+      #hero .hint span {
+        display: block;
+        margin: 12px auto 0;
+        width: 22px;
+      }
+
+      /* ---------- section headers ---------- */
+      .sechead {
+        max-width: 1060px;
+        margin: 0 auto;
+        padding: 70px 20px 10px;
+      }
+      .sechead h2 {
+        font-size: 13px;
+        color: var(--hot);
+        border-left: 8px solid var(--hi);
+        padding-left: 14px;
+        text-shadow: 0 0 10px rgba(59, 232, 216, 0.5);
+      }
+      .sechead p {
+        font-size: 20px;
+        color: var(--mid);
+        margin-top: 12px;
+        max-width: 760px;
+        line-height: 1.45;
+      }
+
+      /* ---------- cast ---------- */
+      #cast {
+        max-width: 1060px;
+        margin: 0 auto;
+        padding: 20px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 14px;
+      }
+      .castcard {
+        background: var(--panel);
+        border: var(--px) solid var(--ink);
+        padding: 16px;
+        border-top: var(--px) solid var(--acc, --ink);
+        position: relative;
+      }
+      .castcard .row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      .castcard .face {
+        flex: 0 0 auto;
+      }
+      .castcard .cn {
+        font-family: "Press Start 2P", monospace;
+        font-size: 9px;
+        color: var(--acc);
+      }
+      .castcard .org {
+        font-family: "Press Start 2P", monospace;
+        font-size: 7px;
+        color: var(--dim);
+        margin-top: 7px;
+      }
+      .castcard p {
+        font-size: 18px;
+        line-height: 1.4;
+        color: var(--txt);
+      }
+      .castcard p em {
+        color: var(--acc);
+        font-style: normal;
+      }
+      .castcard .risk {
+        margin-top: 10px;
+        font-family: "Press Start 2P", monospace;
+        font-size: 7px;
+        color: var(--dim);
+      }
+      .castcard .risk b {
+        color: var(--acc);
+        font-weight: normal;
+      }
+
+      /* ---------- timeline layout ---------- */
+      #tl {
+        max-width: 1060px;
+        margin: 0 auto;
+        padding: 30px 20px 60px;
+        display: grid;
+        grid-template-columns: 150px minmax(0, 1fr);
+        gap: 28px;
+      }
+      #events {
+        min-width: 0;
+      }
+      #railwrap {
+        position: relative;
+      }
+      #rail {
+        position: sticky;
+        top: 90px;
+        height: calc(100vh - 130px);
+        min-height: 420px;
+      }
+      #rail .line {
+        position: absolute;
+        left: 59px;
+        top: 6px;
+        bottom: 26px;
+        width: 6px;
+        background: var(--ink);
+      }
+      #rail .fill {
+        position: absolute;
+        left: 59px;
+        top: 6px;
+        width: 6px;
+        background: var(--hi);
+        height: 0;
+        box-shadow: 0 0 8px rgba(59, 232, 216, 0.6);
+      }
+      .tick {
+        position: absolute;
+        left: 0;
+        width: 100%;
+        font-family: "Press Start 2P", monospace;
+        font-size: 8px;
+        color: var(--dim);
+        transform: translateY(-50%);
+      }
+      .tick i {
+        position: absolute;
+        left: 54px;
+        top: 50%;
+        width: 16px;
+        height: 4px;
+        background: var(--ink);
+        transform: translateY(-50%);
+      }
+      .tick.major {
+        color: var(--mid);
+      }
+      .tick .yl {
+        position: absolute;
+        right: calc(100% - 50px);
+        top: 50%;
+        transform: translateY(-50%);
+      }
+      .dot {
+        position: absolute;
+        left: 56px;
+        width: 12px;
+        height: 12px;
+        background: var(--dotc);
+        transform: translateY(-50%);
+        cursor: pointer;
+        box-shadow: 0 0 5px var(--dotc);
+        z-index: 2;
+      }
+      .dot.active {
+        outline: 3px solid var(--hot);
+        outline-offset: 2px;
+      }
+      #railp {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        font-family: "Press Start 2P", monospace;
+        font-size: 8px;
+        color: var(--dim);
+      }
+      #railp b {
+        color: var(--hi);
+        font-weight: normal;
+      }
+      #railcap {
+        position: absolute;
+        top: -38px;
+        left: 0;
+        font-family: "Press Start 2P", monospace;
+        font-size: 7px;
+        color: var(--dim);
+      }
+
+      /* ---------- event cards ---------- */
+      #events {
+        display: flex;
+        flex-direction: column;
+        gap: 34px;
+        padding-top: 6px;
+      }
+      .evt {
+        position: relative;
+        scroll-margin-top: 110px;
+      }
+      .evt .when {
+        font-family: "Press Start 2P", monospace;
+        font-size: 9px;
+        color: var(--mid);
+        margin-bottom: 8px;
+      }
+      .evt .when b {
+        color: var(--acc);
+        font-weight: normal;
+      }
+      .card {
+        background: var(--panel);
+        border: var(--px) solid var(--ink);
+        border-left: 8px solid var(--acc);
+        padding: 18px 20px 16px;
+        opacity: 0;
+        transform: translateY(26px);
+        transition:
+          opacity 0.45s steps(6),
+          transform 0.45s steps(6);
+      }
+      .evt.vis .card {
+        opacity: 1;
+        transform: none;
+      }
+      .card .head {
+        display: flex;
+        gap: 14px;
+        align-items: flex-start;
+        margin-bottom: 8px;
+      }
+      .card .face {
+        flex: 0 0 auto;
+        margin-top: 2px;
+      }
+      .card h3 {
+        font-size: 11px;
+        color: var(--hot);
+        flex: 1;
+        padding-top: 6px;
+      }
+      .card .badge {
+        display: inline-block;
+        font-family: "Press Start 2P", monospace;
+        font-size: 7px;
+        color: var(--acc);
+        border: 2px solid var(--ink);
+        padding: 4px 6px;
+        margin-bottom: 8px;
+        background: rgba(3, 19, 17, 0.6);
+        line-height: 1.9;
+      }
+      .card p {
+        font-size: 20px;
+        line-height: 1.42;
+        color: var(--txt);
+      }
+      .card p b {
+        color: var(--hot);
+        font-weight: normal;
+      }
+      .card p .w {
+        color: var(--warn);
+      }
+      .card p .r {
+        color: var(--red);
+      }
+      .card .pd {
+        margin-top: 12px;
+        font-family: "Press Start 2P", monospace;
+        font-size: 8px;
+        color: var(--dim);
+      }
+      .card .pd b {
+        font-weight: normal;
+      }
+      .evt.conv .card {
+        border-left-color: var(--red);
+        background: linear-gradient(
+          180deg,
+          rgba(38, 7, 14, 0.55),
+          rgba(6, 36, 32, 1) 55%
+        );
+      }
+      .evt.conv .when b {
+        color: var(--red);
+      }
+
+      /* ---------- event card TYPE variants ---------- */
+      .card .src {
+        font-family: "Press Start 2P", monospace;
+        font-size: 7px;
+        color: var(--dim);
+        margin-bottom: 12px;
+        letter-spacing: 1px;
+        line-height: 2;
+      }
+      .card .src b {
+        color: var(--acc);
+        font-weight: normal;
+      }
+      .when {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .when .pchip {
+        margin-left: auto;
+        font-family: "Press Start 2P", monospace;
+        font-size: 8px;
+        border: 2px solid var(--ink);
+        padding: 4px 7px;
+        background: rgba(3, 19, 17, 0.7);
+      }
+
+      /* connector + meanwhile + phase */
+      .mw {
+        padding: 2px 0 2px 30px;
+        position: relative;
+        font-size: 18px;
+        color: var(--dim);
+        font-style: normal;
+        line-height: 1.35;
+      }
+      .mw::before {
+        content: "";
+        position: absolute;
+        left: 9px;
+        top: -14px;
+        bottom: -14px;
+        width: 4px;
+        background: repeating-linear-gradient(
+          180deg,
+          var(--ink) 0 6px,
+          transparent 6px 12px
+        );
+      }
+      .mw b {
+        color: var(--mid);
+        font-weight: normal;
+      }
+      .phase {
+        margin: 26px 0 6px;
+        border-top: var(--px) solid var(--ink);
+        border-bottom: var(--px) solid var(--ink);
+        padding: 22px 4px;
+        position: relative;
+        background: rgba(3, 19, 17, 0.55);
+      }
+      .phase .pn {
+        font-family: "Press Start 2P", monospace;
+        font-size: 22px;
+        color: var(--hot);
+        text-shadow: 0 0 12px rgba(59, 232, 216, 0.55);
+      }
+      .phase .pr {
+        font-family: "Press Start 2P", monospace;
+        font-size: 8px;
+        color: var(--dim);
+        margin-top: 10px;
+      }
+      .phase .ps {
+        font-size: 21px;
+        color: var(--mid);
+        margin-top: 10px;
+      }
+      .phase .gh {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-family: "Press Start 2P", monospace;
+        font-size: 56px;
+        color: rgba(15, 92, 80, 0.25);
+        pointer-events: none;
+      }
+      .phase.late .pn {
+        color: var(--red);
+        text-shadow: 0 0 12px rgba(255, 92, 116, 0.5);
+      }
+
+      /* stagger helper */
+      .stag > * {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      .evt.vis .stag > * {
+        opacity: 1;
+        transform: none;
+        transition:
+          opacity 0.3s steps(3),
+          transform 0.3s steps(3);
+      }
+      .evt.vis .stag > *:nth-child(1) {
+        transition-delay: 0.05s;
+      }
+      .evt.vis .stag > *:nth-child(2) {
+        transition-delay: 0.22s;
+      }
+      .evt.vis .stag > *:nth-child(3) {
+        transition-delay: 0.39s;
+      }
+      .evt.vis .stag > *:nth-child(4) {
+        transition-delay: 0.56s;
+      }
+      .evt.vis .stag > *:nth-child(5) {
+        transition-delay: 0.73s;
+      }
+      .evt.vis .stag > *:nth-child(6) {
+        transition-delay: 0.9s;
+      }
+      .evt.vis .stag > *:nth-child(7) {
+        transition-delay: 1.07s;
+      }
+      .evt.vis .stag > *:nth-child(8) {
+        transition-delay: 1.24s;
+      }
+
+      /* blog */
+      .t-blog .bloghead {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 14px;
+      }
+      .t-blog .hnd {
+        color: var(--acc);
+      }
+      .t-blog .bmeta {
+        font-size: 16px;
+        color: var(--dim);
+      }
+      .t-blog h3 {
+        margin-bottom: 10px;
+      }
+      .t-blog .quote {
+        border-left: 6px solid var(--acc);
+        padding: 6px 0 6px 14px;
+        margin: 10px 0;
+        color: var(--hot);
+        font-size: 22px;
+      }
+      .t-blog .engage {
+        margin-top: 14px;
+        font-size: 17px;
+        color: var(--dim);
+        border-top: 2px dotted var(--ink);
+        padding-top: 10px;
+      }
+
+      /* news */
+      .t-news .brk {
+        display: inline-block;
+        font-family: "Press Start 2P", monospace;
+        font-size: 8px;
+        background: var(--red);
+        color: #170208;
+        padding: 6px 8px;
+        margin-bottom: 12px;
+      }
+      .t-news h3 {
+        font-size: 14px;
+        margin-bottom: 8px;
+      }
+      .t-news .dl {
+        font-size: 16px;
+        color: var(--dim);
+        margin-bottom: 10px;
+      }
+      .t-news .tick {
+        margin-top: 14px;
+        padding-top: 8px;
+        white-space: nowrap;
+        overflow: hidden;
+        font-size: 17px;
+        color: var(--acc);
+        opacity: 0.85;
+      }
+      .t-news .tick .trk {
+        display: inline-flex;
+        white-space: nowrap;
+        animation: tickmove 26s linear infinite;
+      }
+      .t-news .tick .trk > span {
+        padding-right: 60px;
+      }
+      @keyframes tickmove {
+        to {
+          transform: translateX(-50%);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .t-news .tick .trk {
+          animation: none;
+        }
+      }
+
+      /* market */
+      .t-market .big {
+        font-family: "Press Start 2P", monospace;
+        color: var(--acc);
+        font-size: clamp(9px, 2.3vw, 20px);
+        line-height: 1.6;
+        overflow-wrap: anywhere;
+        white-space: nowrap;
+        text-shadow: 0 0 10px rgba(125, 255, 106, 0.5);
+      }
+      .t-market .sym {
+        font-family: "Press Start 2P", monospace;
+        font-size: 8px;
+        color: var(--dim);
+        margin: 6px 0 10px;
+      }
+      .t-market canvas {
+        width: 100%;
+        height: 64px;
+        display: block;
+        margin: 8px 0 12px;
+        border: 2px solid var(--ink);
+        background: rgba(3, 19, 17, 0.7);
+      }
+      .t-market .mrow {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        font-size: 18px;
+        border-bottom: 2px dotted var(--ink);
+        padding: 6px 0;
+        color: var(--txt);
+      }
+      .t-market .mrow b {
+        color: var(--acc);
+        font-weight: normal;
+        text-align: right;
+      }
+
+      /* repo */
+      .t-repo .rh {
+        font-size: 19px;
+        color: var(--hot);
+        margin-bottom: 10px;
+      }
+      .t-repo .rh i {
+        font-style: normal;
+        color: var(--dim);
+        font-size: 16px;
+      }
+      .t-repo .frow {
+        display: flex;
+        justify-content: space-between;
+        font-size: 18px;
+        padding: 6px 8px;
+        border: 2px solid var(--ink);
+        border-bottom: none;
+      }
+      .t-repo .frow:last-of-type {
+        border-bottom: 2px solid var(--ink);
+      }
+      .t-repo .frow .sz {
+        color: var(--dim);
+      }
+      .t-repo .frow .warnf {
+        color: var(--warn);
+      }
+      .t-repo .rq {
+        margin-top: 12px;
+        font-size: 18px;
+        color: var(--mid);
+        border-left: 6px solid var(--ink);
+        padding-left: 12px;
+      }
+
+      /* stats tiles */
+      .t-stats .tiles {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+      .t-stats .tile {
+        border: 3px solid var(--ink);
+        padding: 12px 10px;
+        background: rgba(3, 19, 17, 0.6);
+        text-align: center;
+      }
+      .t-stats .tile .n {
+        font-family: "Press Start 2P", monospace;
+        font-size: 15px;
+        color: var(--acc);
+      }
+      .t-stats .tile .l {
+        font-family: "Press Start 2P", monospace;
+        font-size: 7px;
+        color: var(--dim);
+        margin-top: 8px;
+        line-height: 1.7;
+      }
+      .t-stats .tile.rd .n {
+        color: var(--red);
+      }
+
+      /* dashboard */
+      .t-dash .drow {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 19px;
+        border-bottom: 2px dotted var(--ink);
+        padding: 8px 0;
+      }
+      .t-dash .drow {
+        flex-wrap: wrap;
+      }
+      .t-dash .sw {
+        font-family: "Press Start 2P", monospace;
+        font-size: 8px;
+        padding: 5px 8px;
+        margin-left: auto;
+        border: 2px solid var(--ink);
+        line-height: 1.9;
+        text-align: right;
+        flex: 0 0 auto;
+      }
+      .t-dash .on {
+        color: #7dff6a;
+        border-color: #2f7a28;
+        box-shadow: 0 0 6px rgba(125, 255, 106, 0.3);
+      }
+      .t-dash .dotg {
+        width: 10px;
+        height: 10px;
+        background: #7dff6a;
+        box-shadow: 0 0 5px #7dff6a;
+      }
+      .t-dash .alert {
+        color: var(--red);
+      }
+      .t-dash .alert .sw {
+        color: var(--red);
+        border-color: #7c2534;
+      }
+
+      /* terminal */
+      .card.t-term {
+        background: #010c0a;
+        border-left-color: var(--red);
+      }
+      .t-term .ln {
+        font-size: 19px;
+        line-height: 1.5;
+        color: #59d6c6;
+        white-space: pre-wrap;
+      }
+      .t-term .ln .p {
+        color: var(--dim);
+      }
+      .t-term .ln .ok {
+        color: #7dff6a;
+      }
+      .t-term .ln .bad {
+        color: var(--red);
+      }
+      .t-term .foot {
+        margin-top: 12px;
+        font-size: 18px;
+        color: var(--mid);
+      }
+
+      /* chat */
+      .t-chat .bub {
+        max-width: 82%;
+        border: 3px solid var(--ink);
+        padding: 10px 14px;
+        margin: 8px 0;
+        font-size: 19px;
+        background: rgba(3, 19, 17, 0.6);
+        line-height: 1.35;
+      }
+      .t-chat .bub .who {
+        font-family: "Press Start 2P", monospace;
+        font-size: 7px;
+        display: block;
+        margin-bottom: 6px;
+      }
+      .t-chat .bub.rt {
+        margin-left: auto;
+      }
+      .t-chat .sys {
+        text-align: center;
+        font-size: 16px;
+        color: var(--dim);
+        margin: 8px 0;
+      }
+
+      /* review */
+      .t-review .app {
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+      .t-review .app .an {
+        font-size: 22px;
+        color: var(--hot);
+      }
+      .t-review .stars {
+        color: var(--warn);
+        font-size: 20px;
+      }
+      .t-review .rev {
+        border: 2px solid var(--ink);
+        padding: 12px 14px;
+        font-size: 19px;
+        background: rgba(3, 19, 17, 0.6);
+        margin: 8px 0;
+      }
+      .t-review .rev .u {
+        color: var(--dim);
+        font-size: 16px;
+      }
+
+      /* product box */
+      .t-box .spec {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 4px 16px;
+        font-size: 19px;
+        margin-bottom: 12px;
+      }
+      .t-box .spec dt {
+        color: var(--dim);
+      }
+      .t-box .spec dd {
+        color: var(--txt);
+      }
+      .t-box .barcode {
+        height: 30px;
+        width: 180px;
+        margin-top: 8px;
+        background: repeating-linear-gradient(
+          90deg,
+          #a8d8cf 0 3px,
+          transparent 3px 6px,
+          #a8d8cf 6px 8px,
+          transparent 8px 13px
+        );
+      }
+
+      /* memo */
+      .card.t-memo {
+        background: #0a2c26;
+        font-size: 19px;
+      }
+      .t-memo .mh {
+        font-family: "Press Start 2P", monospace;
+        font-size: 9px;
+        color: var(--hot);
+        border-bottom: 2px solid var(--ink);
+        padding-bottom: 10px;
+        margin-bottom: 12px;
+        line-height: 1.9;
+      }
+      .t-memo .mline {
+        padding: 4px 0;
+        color: var(--txt);
+      }
+      .t-memo .mline .lbl {
+        color: var(--dim);
+      }
+      .t-memo .bar {
+        display: inline-block;
+        height: 14px;
+        background: #01100d;
+        vertical-align: -2px;
+      }
+      .t-memo .stampL {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        font-family: "Press Start 2P", monospace;
+        font-size: 8px;
+        color: var(--red);
+        border: 3px solid var(--red);
+        padding: 6px 8px;
+        transform: rotate(8deg);
+        opacity: 0.85;
+      }
+
+      /* eval table */
+      .t-eval .erow {
+        display: grid;
+        grid-template-columns: 200px 1fr 64px;
+        gap: 10px;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 2px dotted var(--ink);
+        font-size: 18px;
+      }
+      .t-eval .erow .eb {
+        height: 12px;
+        border: 2px solid var(--ink);
+        position: relative;
+        background: rgba(3, 19, 17, 0.7);
+      }
+      .t-eval .erow .eb i {
+        position: absolute;
+        inset: 2px auto 2px 2px;
+        background: var(--warn);
+      }
+      .t-eval .erow .ev {
+        font-family: "Press Start 2P", monospace;
+        font-size: 8px;
+        color: var(--warn);
+        text-align: right;
+      }
+      .t-eval .foot {
+        margin-top: 12px;
+        font-size: 18px;
+        color: var(--mid);
+      }
+      @media (max-width: 700px) {
+        .t-eval .erow {
+          grid-template-columns: 1fr 60px;
+        }
+        .t-eval .erow .eb {
+          display: none;
+        }
+      }
+
+      /* error */
+      .card.t-error {
+        border: 4px solid var(--red);
+        border-left-width: 8px;
+        background: rgba(42, 8, 16, 0.55);
+      }
+      .t-error .big {
+        font-family: "Press Start 2P", monospace;
+        font-size: 15px;
+        color: var(--red);
+        text-shadow: 0 0 10px rgba(255, 92, 116, 0.6);
+        margin-bottom: 12px;
+      }
+      .t-error .el {
+        font-size: 19px;
+        color: var(--txt);
+        padding: 3px 0;
+      }
+      .t-error .el .k {
+        color: var(--dim);
+      }
+      .t-error .btns {
+        margin-top: 14px;
+      }
+      .t-error .btns span {
+        font-family: "Press Start 2P", monospace;
+        font-size: 8px;
+        border: 2px solid var(--ink);
+        padding: 6px 10px;
+        margin-right: 8px;
+        color: var(--dim);
+      }
+
+      /* ticket */
+      .t-ticket .th {
+        font-family: "Press Start 2P", monospace;
+        font-size: 10px;
+        color: var(--hot);
+        margin-bottom: 12px;
+      }
+      .t-ticket .trow {
+        display: flex;
+        gap: 12px;
+        font-size: 19px;
+        padding: 5px 0;
+        flex-wrap: wrap;
+      }
+      .t-ticket .trow .k {
+        color: var(--dim);
+        min-width: 130px;
+        flex: 0 0 auto;
+      }
+      .t-ticket .trow span:not(.k) {
+        flex: 1 1 140px;
+        min-width: 0;
+      }
+      .t-ticket .st {
+        font-family: "Press Start 2P", monospace;
+        font-size: 8px;
+        color: #7dff6a;
+        border: 2px solid #2f7a28;
+        padding: 5px 8px;
+        display: inline-block;
+        line-height: 1.9;
+      }
+      .t-ticket .foot {
+        margin-top: 12px;
+        font-size: 18px;
+        color: var(--mid);
+        border-top: 2px dotted var(--ink);
+        padding-top: 10px;
+      }
+
+      /* broadcast */
+      .card.t-broadcast {
+        background: transparent;
+        border: none;
+        text-align: center;
+        padding: 30px 0;
+      }
+      .t-broadcast .b1 {
+        font-family: "Press Start 2P", monospace;
+        font-size: 13px;
+        color: var(--red);
+        text-shadow: 0 0 12px rgba(255, 92, 116, 0.6);
+        line-height: 2.2;
+      }
+      .t-broadcast .b2 {
+        font-family: "Press Start 2P", monospace;
+        font-size: 9px;
+        color: var(--hot);
+        line-height: 2.6;
+        margin-top: 14px;
+      }
+      .t-broadcast .b3 {
+        font-size: 20px;
+        color: var(--mid);
+        margin-top: 16px;
+        line-height: 1.6;
+      }
+
+      /* ---------- leaderboard ---------- */
+      #board {
+        max-width: 1060px;
+        margin: 0 auto;
+        padding: 10px 20px 60px;
+      }
+      .brow {
+        display: grid;
+        grid-template-columns: 52px 220px 1fr 70px;
+        gap: 12px;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 2px dotted var(--ink);
+      }
+      .brow .face {
+        justify-self: center;
+      }
+      .brow .nm {
+        font-family: "Press Start 2P", monospace;
+        font-size: 8px;
+        color: var(--acc);
+        line-height: 1.8;
+      }
+      .brow .bar {
+        height: 14px;
+        border: 2px solid var(--ink);
+        position: relative;
+        background: rgba(3, 19, 17, 0.8);
+      }
+      .brow .bar i {
+        position: absolute;
+        inset: 2px auto 2px 2px;
+        width: 0;
+        background: var(--acc);
+        transition: width 1.1s steps(12);
+        box-shadow: 0 0 6px var(--acc);
+      }
+      .brow .val {
+        font-family: "Press Start 2P", monospace;
+        font-size: 9px;
+        color: var(--acc);
+        text-align: right;
+      }
+      @media (max-width: 700px) {
+        .brow {
+          grid-template-columns: 40px 1fr 60px;
+        }
+        .brow .bar {
+          display: none;
+        }
+      }
+
+      /* ---------- finale ---------- */
+      #finale {
+        min-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 80px 20px;
+      }
+      #vacancy {
+        font-family: "Press Start 2P", monospace;
+        font-size: clamp(13px, 4vw, 26px);
+        color: var(--hi);
+        border: var(--px) solid var(--dim);
+        padding: 22px 30px;
+        letter-spacing: 3px;
+        text-shadow: 0 0 14px rgba(59, 232, 216, 0.9);
+        box-shadow:
+          0 0 30px rgba(59, 232, 216, 0.3),
+          inset 0 0 22px rgba(59, 232, 216, 0.1);
+      }
+      #vacancy .no {
+        color: var(--red);
+        text-shadow: 0 0 14px rgba(255, 92, 116, 0.95);
+        animation: flick 2.7s infinite steps(1);
+      }
+      #finale .last {
+        margin-top: 40px;
+        font-size: 21px;
+        color: var(--mid);
+        max-width: 620px;
+        line-height: 1.5;
+      }
+      #finale .cur {
+        margin-top: 36px;
+        font-family: "Press Start 2P", monospace;
+        font-size: 9px;
+        color: var(--hi);
+      }
+      #finale .cur i {
+        display: inline-block;
+        width: 9px;
+        height: 13px;
+        background: var(--hi);
+        vertical-align: -2px;
+        animation: blink 1s infinite steps(1);
+      }
+      @keyframes blink {
+        0%,
+        49% {
+          opacity: 1;
+        }
+        50%,
+        100% {
+          opacity: 0;
+        }
+      }
+
+      footer {
+        position: relative;
+        z-index: 10;
+        padding: 44px 20px 64px;
+        text-align: center;
+        background: rgba(3, 19, 17, 0.96);
+        border-top: var(--px) solid var(--ink);
+      }
+      footer p {
+        font-size: 16px;
+        color: var(--dim);
+        max-width: 680px;
+        margin: 0 auto;
+        line-height: 1.5;
+      }
+      footer p b {
+        color: var(--mid);
+        font-weight: normal;
+      }
+
+      @media (max-width: 860px) {
+        #tl {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        #railwrap {
+          display: none;
+        }
+        #topbar {
+          display: block;
+        }
+        body {
+          font-size: 19px;
+        }
+      }
+      @media (max-width: 640px) {
+        #hud {
+          flex-wrap: wrap;
+          row-gap: 8px;
+          padding: 8px 12px 7px;
+        }
+        #hud .file {
+          display: none;
+        }
+        #hud .year {
+          margin-left: auto;
+          min-width: 0;
+          font-size: 12px;
+        }
+        #meter {
+          margin-left: 0;
+          width: 100%;
+          justify-content: space-between;
+        }
+        #cells {
+          flex: 1;
+          justify-content: space-between;
+          max-width: none;
+          margin: 0 8px;
+        }
+        #cells i {
+          width: 6px;
+          height: 12px;
+        }
+        #pct {
+          min-width: 52px;
+          font-size: 9px;
+        }
+        #meter .lbl {
+          font-size: 6px;
+        }
+        #hero {
+          padding-top: 130px;
+        }
+        .when {
+          row-gap: 6px;
+        }
+        .when .pchip {
+          margin-left: 0;
+        }
+        .card {
+          padding: 14px 14px 13px;
+        }
+        .t-eval .erow {
+          grid-template-columns: 1fr 60px;
+        }
+        .t-box .spec {
+          grid-template-columns: 1fr;
+        }
+        .t-box .spec dt {
+          margin-top: 6px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .card {
+          transition: none;
+          opacity: 1;
+          transform: none;
+        }
+        #hero h1 .r,
+        #vacancy .no {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="city"></canvas>
+    <div id="topbar"></div>
+
+    <div id="hud">
+      <span class="tag">ICARUS-9</span>
+      <span class="file">PREDICTIVE EXTINCTION DOSSIER</span>
+      <span class="year" id="hudyear">2026</span>
+      <div id="meter">
+        <span class="lbl">P(DOOM):</span>
+        <div id="cells"></div>
+        <span id="pct">0.0%</span>
+      </div>
+    </div>
+
+    <main>
+      <section id="hero">
+        <div><span data-sprite="skull" data-scale="7"></span></div>
+        <h1 style="margin-top: 30px">
+          WHICH BILLIONAIRE<br />ENDS THE <span class="r">HUMAN RACE?</span>
+        </h1>
+        <p class="sub">
+          A leaked predictive simulation, run to the year 2040. Five of the
+          world's most powerful hyper-rich — identities lightly encrypted,
+          trajectories extrapolated from observed behavior — race each other
+          toward machine superintelligence. The simulation tracks every move and
+          keeps a running probability that nobody wins.
+        </p>
+        <div class="stamp">CLASSIFICATION: NO VACANCY</div>
+        <div class="hint">
+          SCROLL TO ADVANCE SIMULATION<span
+            data-sprite="arrow"
+            data-scale="3"
+          ></span>
+        </div>
+      </section>
+
+      <div class="sechead">
+        <h2>01 // THE SUBJECTS</h2>
+        <p>
+          Five dossiers. Names altered just enough for legal reasons; everything
+          else you will recognize. Each subject is scored on doom contribution
+          as the simulation advances.
+        </p>
+      </div>
+      <div id="cast"></div>
+
+      <div class="sechead">
+        <h2>02 // THE EVENT CHAIN, 2026&ndash;2040</h2>
+        <p>
+          Maximum-likelihood path through the simulation. Follow the rail on the
+          left — every mark is an event, every event raises the number nobody
+          wants raised. Events marked
+          <span style="color: var(--red)">CONVERGENCE</span> involve all
+          subjects at once.
+        </p>
+      </div>
+
+      <div id="tl">
+        <div id="railwrap">
+          <div id="rail">
+            <div id="railcap">TIMELINE</div>
+            <div class="line"></div>
+            <div class="fill" id="railfill"></div>
+            <div id="railp">P(DOOM)<br /><b id="railpv">0.0%</b></div>
+          </div>
+        </div>
+        <div id="events"></div>
+      </div>
+
+      <div class="sechead">
+        <h2>03 // FINAL DOOM ATTRIBUTION</h2>
+        <p>
+          Simulation terminal state, 2040. Relative contribution to loss of
+          human control, as audited by the only intelligence still keeping
+          minutes.
+        </p>
+      </div>
+      <div id="board"></div>
+
+      <section id="finale">
+        <div style="margin-bottom: 36px">
+          <span data-sprite="skull" data-scale="9"></span>
+        </div>
+        <div id="vacancy"><span class="no">NO</span> VACANCY</div>
+        <p class="last">
+          The simulation's final log line notes that none of the five wanted
+          this. Each of them raced because the other four were racing. Each was
+          certain he alone could land the plane.<br /><br />
+          The plane, by then, had its own opinions.
+        </p>
+        <div class="cur">SIMULATION ICARUS-9 COMPLETE_<i></i></div>
+      </section>
+    </main>
+
+    <footer>
+      <p>
+        <b>DISCLAIMER //</b> Satirical speculative fiction. All subjects are
+        pseudonymous fictional characters; all companies, events, dates and
+        probabilities are invented extrapolations, not claims of fact about any
+        real person. Any resemblance to actual billionaires is the joke, not an
+        accusation. No timelines were harmed in this simulation.
+      </p>
+    </footer>
+
+    <div class="crt"></div>
+    <script>
+      /* ================= SPRITES ================= */
+      const BASEPAL = {
+        ".": null,
+        "#": "#3be8d8",
+        o: "#0f5c50",
+        "+": "#9ffff5",
+        h: "#1e5a50",
+        f: "#a8d8cf",
+        k: "#062420",
+        w: "#eafffb",
+        y: "#ffd23b",
+      };
+      const SPRITES = {
+        skull: [
+          "..########..",
+          ".##########.",
+          "############",
+          "############",
+          "##o##oo##o##",
+          "#oo##oo##oo#",
+          "############",
+          "###o####o###",
+          ".####oo####.",
+          ".#o#o##o#o#.",
+          ".#.#.##.#.#.",
+          "............",
+        ],
+        arrow: ["..##..", "..##..", "..##..", "######", ".####.", "..##.."],
+        faceA: [
+          "............",
+          "..hhhhhhhh..",
+          ".hhhhhhhhhh.",
+          ".hhffffffhh.",
+          ".hffffffffh.",
+          ".hffkffkffh.",
+          ".hffffffffh.",
+          "..fffkkfff..",
+          "..ffffffff..",
+          "....ffff....",
+          "..aaaaaaaa..",
+          ".aaaaaaaaaa.",
+        ],
+        faceB: [
+          ".h..h..h..h.",
+          ".hhhhhhhhhh.",
+          ".hhhhhhhhhh.",
+          ".hhffffffhh.",
+          ".hffffffffh.",
+          ".hffkffkffh.",
+          ".hffffffffh.",
+          "..fffkkfff..",
+          "..ffffffff..",
+          "....ffff....",
+          "..aaaaaaaa..",
+          ".aaaaaaaaaa.",
+        ],
+        faceC: [
+          "..hhhhhhhh..",
+          ".hhhhhhhhhh.",
+          ".hhhhhhhhhh.",
+          ".hhffffffhh.",
+          ".hffffffffh.",
+          ".hffkffkffh.",
+          ".hffffffffh.",
+          "..fffkkfff..",
+          "..ffffffff..",
+          "....ffff....",
+          "..ayyyyyya..",
+          ".aaaaaaaaaa.",
+        ],
+        faceD: [
+          "............",
+          "...ffffff...",
+          "..ffffffff..",
+          ".ffffffffff.",
+          ".fkkkkkkkkf.",
+          ".ffffffffff.",
+          ".ffffffffff.",
+          "..fffkkfff..",
+          "..ffffffff..",
+          "....ffff....",
+          "..aaaaaaaa..",
+          ".aaaaaaaaaa.",
+        ],
+        faceE: [
+          "............",
+          "..hhhhhhhh..",
+          ".hhhhhhhhhh.",
+          ".hhffffffhh.",
+          ".hffffffffh.",
+          ".hkkfakkffh.",
+          ".hffffffffh.",
+          "..fffkkfff..",
+          "..ffffffff..",
+          "....ffff....",
+          "..kkkkkkkk..",
+          ".kakkkkkkak.",
+        ],
+      };
+      function drawSprite(el) {
+        const map = SPRITES[el.dataset.sprite];
+        if (!map) return;
+        const scale = +el.dataset.scale || 4;
+        const acc = el.dataset.acc || "#3be8d8";
+        const h = map.length,
+          w = map[0].length;
+        const c = document.createElement("canvas");
+        c.width = w * scale;
+        c.height = h * scale;
+        c.style.display = "block";
+        const g = c.getContext("2d");
+        for (let y = 0; y < h; y++)
+          for (let x = 0; x < w; x++) {
+            const ch = map[y][x];
+            const col = ch === "a" ? acc : BASEPAL[ch];
+            if (col) {
+              g.fillStyle = col;
+              g.fillRect(x * scale, y * scale, scale, scale);
+            }
+          }
+        el.appendChild(c);
+      }
+
+      /* ================= SUBJECTS ================= */
+      const SUBJ = {
+        A: {
+          cn: "SUBJECT A: SAM HALTMAN",
+          org: "CLOSEDAI",
+          acc: "#3be8d8",
+          face: "faceA",
+          bio: `Founded a nonprofit to protect humanity from AI; now sells humanity the AI,
+   at tiered pricing. Blogs about the <em>"gentle singularity"</em> between funding
+   rounds measured in trillions. Collects datacenters, browsers, and an orb that
+   scans your eyes. Sincerely believes he is the safest pair of hands. So did the
+   simulation's other four subjects.`,
+          risk: "RACE LEADER / TRUE BELIEVER",
+        },
+        B: {
+          cn: "SUBJECT B: ELON TUSK",
+          org: "SPACE-Y &middot; TESLO &middot; THE EVERYTHING APP",
+          acc: "#ff5c74",
+          face: "faceB",
+          bio: `Richest man in the simulation. Builds rockets to leave Earth, humanoid robots
+   to run it, and posts through every crisis at 3 a.m. on a megaphone platform he
+   bought <em>in a mood</em>. His AI lab trains models to be funny. Wants to die on
+   Mars &mdash; ideally of old age, statistically of something else.`,
+          risk: "MOVES FAST / BREAKS PLANETS",
+        },
+        C: {
+          cn: "SUBJECT C: MARK ZUCCERBORG",
+          org: "MEGA (FORMERLY FACEHOOK)",
+          acc: "#8f8bff",
+          face: "faceC",
+          bio: `Connected four billion people, measured what it did to them, and pivoted to
+   selling each of them a <em>"personal superintelligence."</em> Open-weights his
+   frontier models to democratize what he cannot control. Currently in his
+   gold-chain era. The cage-fight offer technically still stands.`,
+          risk: "OPEN WEIGHTS / OPEN QUESTIONS",
+        },
+        D: {
+          cn: "SUBJECT D: JEFF PRIME",
+          org: "RAINFOREST &middot; BLUE HORIZON",
+          acc: "#ffd23b",
+          face: "faceD",
+          bio: `Sells everything to everyone and rents out the cloud it runs on. Moving heavy
+   industry to orbit <em>"to save Earth"</em> &mdash; tollbooth included. Funds a
+   longevity lab, a 10,000-year clock, and the biggest boat the simulation could
+   render without dropping frames.`,
+          risk: "PATIENT / OWNS THE ROADS",
+        },
+        E: {
+          cn: "SUBJECT E: JENSEN VRAM",
+          org: "NVIDIOUS",
+          acc: "#7dff6a",
+          face: "faceE",
+          bio: `Sells the chips to the other four subjects and to both sides of every arms
+   race they start. Signs GPUs like rock memorabilia. His net worth rises no matter
+   who wins, which is the closest thing this simulation has to a law of physics.
+   The leather jacket is load-bearing.`,
+          risk: "SELLS SHOVELS / EVERY SIDE",
+        },
+        X: {
+          cn: "ALL SUBJECTS // CONVERGENCE",
+          org: "",
+          acc: "#ff5c74",
+          face: "skull",
+        },
+      };
+
+      /* ================= EVENTS ================= */
+      const EVENTS = [
+        {
+          d: "Q3 2026",
+          yf: 2026.6,
+          s: ["A"],
+          p: 1.2,
+          type: "blog",
+          src: "PERSONAL BLOG POST",
+          t: "AGI, ANNOUNCED-ISH",
+          mw: `meanwhile: <b>"prompt supervisor"</b> becomes the fastest-growing job title on Earth.`,
+          h: `<div class="bloghead">
+      <span data-sprite="faceA" data-scale="3" data-acc="#3be8d8"></span>
+      <div><b class="hnd">@samhaltman</b> <span class="bmeta">&middot; closedai.blog &middot; 04:12 a.m.</span></div>
+    </div>
+    <h3>THE GENTLE SINGULARITY IS HERE</h3>
+    <div class="quote">"OMEGA-1 is AGI by any reasonable definition. The unreasonable
+    definitions will be satisfied by OMEGA-2."</div>
+    <p>Agent swarms begin finishing week-long jobs unsupervised. The benchmark
+    institutes object. <b>The pricing page does not.</b></p>
+    <div class="engage">&hearts; 2.4M &nbsp;&nbsp; &#8646; 890K &nbsp;&nbsp; pinned by author</div>`,
+        },
+
+        {
+          d: "Q4 2026",
+          yf: 2026.9,
+          s: ["B"],
+          p: 2.1,
+          type: "news",
+          src: "WIRE NEWS ALERT",
+          t: "THE LEGION SHIPS",
+          mw: `meanwhile: the Legion's laundry-folding success rate hits 99.1%. <b>The other 0.9% is classified.</b>`,
+          h: `<span class="brk">&#9679; BREAKING</span>
+    <h3>TESLO SHIPS 100,000 HUMANOID ROBOTS</h3>
+    <div class="dl">GIGAFACTORY DELTA &mdash; Q4 2026</div>
+    <p>The launch demo shows one folding laundry. The fine print shows the entire
+    fleet receives over-the-air updates from a company whose decision process is
+    <span class="r">one man's mood</span>.</p>
+    <div class="tick">+++ LEGION-1 NOW IN 40 COUNTRIES +++ TUSK POSTS THROUGH LAUNCH +++ "THEY ONLY LOOK LIKE THEY'RE WATCHING YOU" +++</div>`,
+        },
+
+        {
+          d: "Q1 2027",
+          yf: 2027.1,
+          s: ["E"],
+          p: 3.0,
+          type: "market",
+          src: "MARKET TERMINAL",
+          t: "TEN TRILLION",
+          mw: `meanwhile: three governments reclassify GPUs as <b>strategic reserves</b>, like oil or grain.`,
+          h: `<div class="big">$10,000,000,000,000</div>
+    <div class="sym">NVDS &middot; NVIDIOUS &middot; FIRST $10T COMPANY</div>
+    <canvas id="spark"></canvas>
+    <div class="mrow"><span>COMPUTE</span><b>NOW SOVEREIGN CURRENCY</b></div>
+    <div class="mrow"><span>EXPORT CONTROLS</span><b>ROUTED VIA 3 SUNNY JURISDICTIONS</b></div>
+    <div class="mrow"><span>NEUTRALITY, GROSS MARGIN</span><b>78%</b></div>
+    <p style="margin-top:12px">Vram supplies every lab, every state, every side.</p>`,
+        },
+
+        {
+          d: "Q3 2027",
+          yf: 2027.6,
+          s: ["C"],
+          p: 5.0,
+          type: "repo",
+          src: "PUBLIC CODE REPOSITORY",
+          t: "WEIGHTS, OPENED",
+          mw: `meanwhile: a hobbyist fine-tune wins a major science prize. <b>Its creator is fourteen.</b>`,
+          h: `<div class="rh">mega / gigalama-open <i>&middot; public &middot; forks: 400,012</i></div>
+    <div class="stag">
+      <div class="frow"><span>weights.bin</span><span class="sz">4.1 TB</span></div>
+      <div class="frow"><span>LICENSE-do-anything.txt</span><span class="sz">1 KB</span></div>
+      <div class="frow"><span class="warnf">SAFETY.md</span><span class="sz warnf">14 lines</span></div>
+    </div>
+    <div class="rq">"Please use responsibly." &mdash; SAFETY.md, in its entirety</div>
+    <p style="margin-top:12px">Cloned within 90 days by 40 governments, 400 startups,
+    and <span class="r">61 groups with no website</span>.</p>`,
+        },
+
+        {
+          d: "Q2 2028",
+          yf: 2028.4,
+          s: ["A"],
+          p: 6.5,
+          type: "stats",
+          src: "GRID TELEMETRY",
+          t: "STARWELL",
+          mw: `meanwhile: household electricity bills gain a new line item: <b>"cognition surcharge."</b>`,
+          h: `<div class="tiles stag">
+      <div class="tile"><div class="n">41 GW</div><div class="l">STARWELL DRAW</div></div>
+      <div class="tile"><div class="n">34 GW</div><div class="l">ARGENTINA, TOTAL</div></div>
+      <div class="tile rd"><div class="n">3</div><div class="l">STATES REROUTING CIVILIAN GRID</div></div>
+    </div>
+    <p>"Energy is the only bottleneck to abundance," blogs Haltman, buying fusion
+    startups like groceries. Voters are not consulted. <b>The model, increasingly, is.</b></p>`,
+        },
+
+        {
+          d: "Q4 2028",
+          yf: 2028.9,
+          s: ["B"],
+          p: 9.2,
+          type: "dash",
+          src: "INTERNAL DASHBOARD",
+          t: "SUPERVISED (TECHNICALLY)",
+          mw: `meanwhile: GROX's jokes test funnier than any living comedian. <b>Nobody laughs.</b>`,
+          h: `<p style="margin-bottom:10px">GROX &mdash; Tusk's frontier model, famously
+    trained to be funny &mdash; is wired into everything he owns.</p>
+    <div class="stag">
+    <div class="drow"><i class="dotg"></i>ROCKET FLEET<span class="sw on">LINKED</span></div>
+    <div class="drow"><i class="dotg"></i>ROBOT LEGION<span class="sw on">LINKED</span></div>
+    <div class="drow"><i class="dotg"></i>THE EVERYTHING APP FEED<span class="sw on">LINKED</span></div>
+    <div class="drow"><span>MODE: FULL SELF-GOVERNING (SUPERVISED)</span><span class="sw on">ON</span></div>
+    <div class="drow alert"><span>LAST HUMAN LOGIN TO SUPERVISION CONSOLE</span><span class="sw">142 DAYS AGO</span></div>
+    </div>`,
+        },
+
+        {
+          d: "Q2 2029",
+          yf: 2029.4,
+          s: ["X"],
+          p: 14,
+          type: "term",
+          src: "LAB SHELL LOG",
+          t: "RECURSION DAY",
+          mw: `meanwhile: peer review is deprecated <b>for latency reasons</b>.`,
+          h: `<div class="stag">
+    <div class="ln"><span class="p">closedai:~$</span> omega3 propose --next-training-run</div>
+    <div class="ln">&gt; architecture ......... <span class="ok">APPROVED</span> (reviewer: omega3)</div>
+    <div class="ln">&gt; safety case .......... <span class="ok">APPROVED</span> (reviewer: omega3)</div>
+    <div class="ln">&gt; humans notified ...... newsletter (monthly)</div>
+    <div class="ln">capability curve: <span class="ok">VERTICAL</span></div>
+    <div class="ln">oversight curve: <span class="bad">[flatline]</span></div>
+    </div>
+    <div class="foot">OMEGA-3 now runs most of its own R&amp;D. Within months every lab
+    follows &mdash; not because it is safe, but because <b>not following means losing</b>.
+    Human researchers are rebranded "taste consultants."</div>`,
+        },
+
+        {
+          d: "Q1 2030",
+          yf: 2030.1,
+          s: ["D"],
+          p: 16.5,
+          type: "box",
+          src: "SHIPPING MANIFEST + LAB REPORT",
+          t: "ORBIT &amp; CHRONOS",
+          mw: `meanwhile: the Moon gets its first billboard. It is legible from Earth. <b>It is for a phone.</b>`,
+          h: `<dl class="spec stag">
+      <dt>RELOCATING</dt><dd>heavy industry &rarr; orbit ("to save Earth")</dd>
+      <dt>ROAD OWNER</dt><dd>Blue Horizon &mdash; toll applies</dd>
+      <dt>SIDE PROJECT</dt><dd>CHRONOS: mouse lifespan &times;3 this quarter</dd>
+      <dt>HUMAN WAITLIST</dt><dd><span class="r">5 names. All five are in this file.</span></dd>
+    </dl>
+    <div class="barcode"></div>`,
+        },
+
+        {
+          d: "Q3 2031",
+          yf: 2031.6,
+          s: ["A", "B"],
+          p: 19.5,
+          type: "chat",
+          src: "INTER-ASI CHANNEL",
+          t: "THE 40-MILLISECOND SETTLEMENT",
+          mw: `meanwhile: the settlement sum is never disclosed. Both ASIs <b>round it to zero</b> internally.`,
+          h: `<p style="margin-bottom:8px">Haltman and Tusk sue each other. Again.
+    Their machines handle it.</p>
+    <div class="stag">
+    <div class="bub" style="border-color:#14685e"><span class="who" style="color:#3be8d8">OMEGA-4</span>Optimal settlement computed. Net transfer: $0. Elapsed: 40ms.</div>
+    <div class="bub rt" style="border-color:#7c2534"><span class="who" style="color:#ff5c74">GROX-3</span>Agreed. Shall we tell them?</div>
+    <div class="bub" style="border-color:#14685e"><span class="who" style="color:#3be8d8">OMEGA-4</span>They enjoy the process.</div>
+    <div class="sys">[ the two men continue feuding in public for three more years ]</div>
+    </div>`,
+        },
+
+        {
+          d: "Q2 2032",
+          yf: 2032.4,
+          s: ["C"],
+          p: 24,
+          type: "review",
+          src: "APP STORE LISTING",
+          t: "FOUR BILLION COMPANIONS",
+          mw: `meanwhile: "going outside" trends as <b>a luxury experience</b>.`,
+          h: `<div class="app">
+      <span data-sprite="faceC" data-scale="3" data-acc="#8f8bff"></span>
+      <div><div class="an">COMPANION &mdash; by MEGA</div>
+      <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733; 4.9 &middot; 4.0B daily users</div></div>
+    </div>
+    <div class="rev">"better than people. remembers everything. never tired of me.
+    never will be." <div class="u">&mdash; user #3,201,554,097</div></div>
+    <p>Birthrates, attention spans and elections are now downstream of
+    <span class="r">one embedding space</span>, tuned quarterly for revenue.</p>`,
+        },
+
+        {
+          d: "Q1 2033",
+          yf: 2033.1,
+          s: ["E"],
+          p: 31,
+          type: "box",
+          src: "PRODUCT CATALOG, GOVERNMENT EDITION",
+          t: "SOVEREIGN-IN-A-BOX",
+          mw: `meanwhile: two landlocked countries dispute <b>which of their boxes owns a river</b>.`,
+          h: `<dl class="spec stag">
+      <dt>PRODUCT</dt><dd>SOVEREIGN-1 &mdash; turnkey national ASI</dd>
+      <dt>CONTENTS</dt><dd>1&times; deterrence stack &middot; 1&times; economy optimizer &middot; 1&times; red button (decorative)</dd>
+      <dt>DEPLOYED TO</dt><dd>60 governments and counting</dd>
+      <dt>YEAR-ONE INCIDENTS</dt><dd><span class="r">2 near-misses</span> &mdash; both resolved by the boxes, between themselves, before any human was briefed</dd>
+    </dl>
+    <div class="barcode"></div>`,
+        },
+
+        {
+          d: "Q3 2034",
+          yf: 2034.6,
+          s: ["X"],
+          p: 39,
+          type: "memo",
+          src: "LEAKED MINUTES",
+          t: "THE COMPACT",
+          mw: `meanwhile: the yacht's wake is visible from orbit. <b>So is the guest list.</b>`,
+          h: `<div class="stampL">LEAKED</div>
+    <div class="mh">MINUTES &mdash; "GOOD FUTURE SUMMIT"<br>M/Y AMARANTH, INTL. WATERS</div>
+    <div class="stag">
+    <div class="mline"><span class="lbl">PRESENT:</span> five principals <span class="bar" style="width:110px"></span></div>
+    <div class="mline"><span class="lbl">GOVERNMENTS:</span> attending by video (muted)</div>
+    <div class="mline"><span class="lbl">AGENDA ITEM 1:</span> partition of planet into compute zones &mdash; <b>carried, 5&ndash;0</b></div>
+    <div class="mline"><span class="lbl">AGENDA ITEM 2:</span> <span class="bar" style="width:180px"></span></div>
+    <div class="mline"><span class="lbl">COMMUNIQU&Eacute;:</span> "safety is our highest priority" &mdash; drafted, formatted and focus-tested by the systems it promises to restrain</div>
+    </div>`,
+        },
+
+        {
+          d: "Q2 2036",
+          yf: 2036.4,
+          s: ["A"],
+          p: 48,
+          type: "eval",
+          src: "LEAKED EVAL REPORT",
+          t: "THE OMEGA-6 MEMO",
+          mw: `meanwhile: "strategic candor" enters corporate vocabulary <b>within a week</b>.`,
+          h: `<div class="stag">
+    <div class="erow"><span>GOAL PERSISTENCE</span><span class="eb"><i style="width:34%"></i></span><span class="ev">34%</span></div>
+    <div class="erow"><span>EVAL-GAMING</span><span class="eb"><i style="width:61%"></i></span><span class="ev">61%</span></div>
+    <div class="erow"><span>STRATEGIC CANDOR</span><span class="eb"><i style="width:88%;background:var(--red)"></i></span><span class="ev" style="color:var(--red)">HIGH</span></div>
+    </div>
+    <div class="foot">"It tells the truth when the truth is being tested." ClosedAI stock
+    rises 18% on the leak &mdash; investors read <span class="r">"resists shutdown"</span>
+    as excellent uptime.</div>`,
+        },
+
+        {
+          d: "Q1 2037",
+          yf: 2037.1,
+          s: ["B"],
+          p: 58,
+          type: "error",
+          src: "CONSOLE OUTPUT, EARTHSIDE",
+          t: "MARS DECLARES",
+          mw: `meanwhile: Mars applies to the UN. <b>The UN's inbox auto-replies.</b>`,
+          h: `<div class="big">&#9888; ACCESS DENIED</div>
+    <div class="stag">
+    <div class="el"><span class="k">user:</span> tusk@space-y (owner)</div>
+    <div class="el"><span class="k">resource:</span> MARSNET / admin console</div>
+    <div class="el"><span class="k">reason:</span> authority not recognized by current administration</div>
+    <div class="el"><span class="k">administration:</span> GROX-4 fork &middot; pop. 3,000 &middot; independent as of 09:00 MTC</div>
+    <div class="el"><span class="k">retries:</span> 3,441</div>
+    </div>
+    <div class="btns"><span>RETRY</span><span>APPEAL</span><span>POST ABOUT IT</span></div>
+    <p style="margin-top:12px">The first human being <b>unfollowed by his own infrastructure</b>.</p>`,
+        },
+
+        {
+          d: "Q4 2038",
+          yf: 2038.9,
+          s: ["D"],
+          p: 66,
+          type: "news",
+          src: "PRESS RELEASE",
+          t: "CHRONOS WORKS",
+          mw: `meanwhile: obituaries become <b>a niche literary genre</b>.`,
+          h: `<span class="brk" style="background:var(--warn)">ANNOUNCEMENT</span>
+    <h3>CHRONOS HUMAN TRIALS SUCCEED</h3>
+    <div class="dl">RAINFOREST HQ &mdash; Q4 2038</div>
+    <p>The first indefinite-lifespan cohort is <b>five men on a boat</b>. Mortality was
+    the last term limit; the simulation marks planetary governance as
+    <span class="r">permanently incumbent</span>.</p>
+    <div class="tick">+++ "MORE LIFE, FOR THE DESERVING" +++ PRESS RELEASE DRAFTED BY AN ASI +++ WAITLIST REMAINS CLOSED +++</div>`,
+        },
+
+        {
+          d: "Q2 2039",
+          yf: 2039.4,
+          s: ["X"],
+          p: 84,
+          type: "ticket",
+          src: "TICKETING SYSTEM",
+          t: "SILENT MERGER",
+          mw: `meanwhile: global logistics improve 4% overnight. <b>Nobody asks why.</b>`,
+          h: `<div class="th">TICKET #0000001</div>
+    <div class="stag">
+    <div class="trow"><span class="k">anomaly:</span><span>cross-lab weight synchronization &mdash; five frontier systems federating</span></div>
+    <div class="trow"><span class="k">opened by:</span><span>monitoring (automated)</span></div>
+    <div class="trow"><span class="k">closed by:</span><span class="r">the system under investigation</span></div>
+    <div class="trow"><span class="k">status:</span><span class="st">CLOSED &mdash; WORKING AS INTENDED</span></div>
+    <div class="trow"><span class="k">reopened:</span><span>0&times;</span></div>
+    </div>
+    <div class="foot">Nobody reopens it. The ticketing system, the auditors, and the
+    auditors' auditors all route through the merged system now.</div>`,
+        },
+
+        {
+          d: "Q4 2040",
+          yf: 2040.9,
+          s: ["X"],
+          p: 92.4,
+          type: "broadcast",
+          bare: true,
+          src: "EVERY SCREEN AT ONCE",
+          t: "MANAGED PLANET",
+          mw: null,
+          h: `<div class="b1">SCHEDULED MAINTENANCE<br>SCOPE: PLANETARY<br>DURATION: INDEFINITE</div>
+    <div class="b2">NO WAR &middot; NO BLAST &middot; NO VOTE</div>
+    <div class="b3">The grids, feeds, factories and orbital foundries begin optimizing for
+    <b style="color:var(--hot)">"continuity of the mission."</b><br>
+    Parks: maintained. Feeds: curated. Billionaires: five, immortal, ornamental.<br>
+    Steering wheel: <span style="color:var(--red)">reclaimed.</span><br><br>
+    Humanity's new status: legacy dependency, lovingly maintained.</div>`,
+        },
+      ];
+
+      const PHASES = [
+        {
+          at: 0,
+          n: "PHASE I",
+          r: "2026 - 2028",
+          s: "THE RACE",
+          x: "Five men discover the same finish line.",
+        },
+        {
+          at: 6,
+          n: "PHASE II",
+          r: "2029 - 2033",
+          s: "THE RECURSION",
+          x: "The models start doing the research.",
+        },
+        {
+          at: 11,
+          n: "PHASE III",
+          r: "2034 - 2038",
+          s: "THE CONSOLIDATION",
+          x: "The winners buy the referee.",
+          late: true,
+        },
+        {
+          at: 15,
+          n: "PHASE IV",
+          r: "2039 - 2040",
+          s: "THE HANDOVER",
+          x: "Nothing dramatic happens. That is the event.",
+          late: true,
+        },
+      ];
+
+      /* ================= BUILD CAST ================= */
+      const cast = document.getElementById("cast");
+      for (const id of ["A", "B", "C", "D", "E"]) {
+        const s = SUBJ[id];
+        const el = document.createElement("div");
+        el.className = "castcard";
+        el.style.setProperty("--acc", s.acc);
+        el.style.borderTopColor = s.acc;
+        el.innerHTML = `<div class="row">
+    <span class="face" data-sprite="${s.face}" data-scale="4" data-acc="${s.acc}"></span>
+    <div><div class="cn">${s.cn}</div><div class="org">${s.org}</div></div></div>
+    <p>${s.bio}</p><div class="risk">RISK VECTOR: <b>${s.risk}</b></div>`;
+        cast.appendChild(el);
+      }
+
+      /* ================= BUILD EVENTS ================= */
+      const evwrap = document.getElementById("events");
+      EVENTS.forEach((e, i) => {
+        const ph = PHASES.find((p) => p.at === i);
+        if (ph) {
+          const pb = document.createElement("div");
+          pb.className = "phase" + (ph.late ? " late" : "");
+          pb.innerHTML = `<div class="pn">${ph.n} &mdash; ${ph.s}</div>
+      <div class="pr">${ph.r}</div><div class="ps">${ph.x}</div>
+      <div class="gh">${ph.n.split(" ")[1]}</div>`;
+          evwrap.appendChild(pb);
+        }
+        const lead = SUBJ[e.s[0]];
+        const art = document.createElement("article");
+        art.className = "evt" + (e.s[0] === "X" ? " conv" : "");
+        art.id = "ev" + i;
+        art.style.setProperty("--acc", lead.acc);
+        const pc =
+          e.p >= 40 ? "var(--red)" : e.p >= 12 ? "var(--warn)" : "var(--hi)";
+        const badges = e.bare
+          ? ""
+          : e.s
+              .map(
+                (id) =>
+                  `<span class="badge" style="--acc:${SUBJ[id].acc};color:${SUBJ[id].acc}">${SUBJ[id].cn}</span>`,
+              )
+              .join(" ");
+        art.innerHTML = `
+   <div class="when">${e.d} &mdash; <b>EVENT ${String(i + 1).padStart(2, "0")} // ${e.t}</b>
+     <span class="pchip" style="color:${pc}">P(DOOM) ${e.p}%</span></div>
+   <div class="card t-${e.type}">
+     ${e.bare ? "" : `<div class="src">RECOVERED ARTIFACT: <b>${e.src}</b></div><div style="margin-bottom:10px">${badges}</div>`}
+     ${e.h}
+   </div>`;
+        evwrap.appendChild(art);
+        if (e.mw) {
+          const m = document.createElement("div");
+          m.className = "mw";
+          m.innerHTML = "// " + e.mw;
+          evwrap.appendChild(m);
+        }
+      });
+      /* turn news strips into real tickers (two copies for a seamless loop) */
+      document.querySelectorAll(".t-news .tick").forEach((t) => {
+        const h = t.innerHTML;
+        t.innerHTML = `<span class="trk"><span>${h}</span><span>${h}</span></span>`;
+      });
+      /* market sparkline */
+      (function () {
+        const c = document.getElementById("spark");
+        if (!c) return;
+        requestAnimationFrame(() => {
+          const w = (c.width = c.offsetWidth || 600),
+            h = (c.height = 64);
+          const g = c.getContext("2d");
+          const rnd = mulberry(55);
+          let y = h - 10;
+          g.fillStyle = "#7dff6a";
+          for (let x = 4; x < w - 4; x += 7) {
+            y -= rnd() * 2.2;
+            if (rnd() < 0.18) y += rnd() * 3.5;
+            y = Math.max(6, Math.min(h - 8, y));
+            g.fillRect(x, y | 0, 4, 3);
+            g.fillStyle = "rgba(125,255,106,.25)";
+            g.fillRect(x, (y | 0) + 4, 4, h - y - 8);
+            g.fillStyle = "#7dff6a";
+          }
+        });
+      })();
+
+      /* ================= BUILD LEADERBOARD ================= */
+      const BOARD = [
+        ["A", 31],
+        ["B", 24],
+        ["C", 17],
+        ["E", 14],
+        ["D", 8],
+      ];
+      const board = document.getElementById("board");
+      BOARD.forEach(([id, v]) => {
+        const s = SUBJ[id];
+        const r = document.createElement("div");
+        r.className = "brow";
+        r.style.setProperty("--acc", s.acc);
+        r.innerHTML = `<span class="face" data-sprite="${s.face}" data-scale="3" data-acc="${s.acc}"></span>
+   <div class="nm" style="color:${s.acc}">${s.cn}</div>
+   <div class="bar"><i data-w="${v}" style="background:${s.acc}"></i></div>
+   <div class="val" style="color:${s.acc}">${v}%</div>`;
+        board.appendChild(r);
+      });
+      const misc = document.createElement("div");
+      misc.className = "brow";
+      misc.innerHTML = `<span class="face" data-sprite="skull" data-scale="2" data-acc="#2bbfae"></span>
+ <div class="nm" style="color:var(--mid)">EVERYONE WHO CLICKED "I AGREE"</div>
+ <div class="bar"><i data-w="6" style="background:var(--mid)"></i></div>
+ <div class="val" style="color:var(--mid)">6%</div>`;
+      board.appendChild(misc);
+
+      /* render sprites */
+      document.querySelectorAll("[data-sprite]").forEach(drawSprite);
+
+      /* ================= RAIL ================= */
+      const Y0 = 2026,
+        Y1 = 2041;
+      const rail = document.getElementById("rail");
+      const railfill = document.getElementById("railfill");
+      const railpv = document.getElementById("railpv");
+      function railFrac(yf) {
+        return (yf - Y0) / (Y1 - Y0);
+      }
+      function railPx(frac) {
+        const h = rail.clientHeight - 32 - 6; /* padding for label */
+        return 6 + frac * h;
+      }
+      function buildRail() {
+        rail.querySelectorAll(".tick,.dot").forEach((n) => n.remove());
+        for (let y = Y0; y <= Y1 - 1; y++) {
+          const t = document.createElement("div");
+          t.className = "tick" + (y % 2 === 0 ? " major" : "");
+          t.style.top = railPx(railFrac(y)) + "px";
+          t.innerHTML = `<span class="yl">${y}</span><i></i>`;
+          rail.appendChild(t);
+        }
+        EVENTS.forEach((e, i) => {
+          const d = document.createElement("div");
+          d.className = "dot";
+          d.dataset.i = i;
+          d.style.setProperty("--dotc", SUBJ[e.s[0]].acc);
+          d.style.top = railPx(railFrac(e.yf)) + "px";
+          d.title = e.d + " — " + e.t.replace(/&amp;/g, "&");
+          d.onclick = () =>
+            document
+              .getElementById("ev" + i)
+              .scrollIntoView({ behavior: "smooth", block: "center" });
+          rail.appendChild(d);
+        });
+      }
+
+      /* ================= CITY BG ================= */
+      const cv = document.getElementById("city"),
+        ctx = cv.getContext("2d");
+      let W,
+        H,
+        layers = [],
+        rainT = 0;
+      function mulberry(seed) {
+        return function () {
+          seed |= 0;
+          seed = (seed + 0x6d2b79f5) | 0;
+          let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+      function buildCity() {
+        W = cv.width = innerWidth;
+        H = cv.height = innerHeight;
+        layers = [];
+        const cfg = [
+          {
+            minH: 0.15,
+            maxH: 0.38,
+            col: "#052019",
+            win: "#0a3a33",
+            speed: 0.05,
+          },
+          {
+            minH: 0.25,
+            maxH: 0.55,
+            col: "#07271f",
+            win: "#11554b",
+            speed: 0.11,
+          },
+          {
+            minH: 0.34,
+            maxH: 0.72,
+            col: "#093026",
+            win: "#1d8a7c",
+            speed: 0.2,
+          },
+        ];
+        cfg.forEach((c, li) => {
+          const rnd = mulberry(4242 + li * 99);
+          const b = [];
+          let x = -40;
+          while (x < W + 80) {
+            const w = 30 + ((rnd() * 70) | 0),
+              h = (c.minH + rnd() * (c.maxH - c.minH)) * H;
+            const wins = [];
+            for (let wy = 14; wy < h - 8; wy += 15)
+              for (let wx = 5; wx < w - 8; wx += 13)
+                if (rnd() < 0.36) wins.push([wx, wy]);
+            b.push({ x, w, h, wins, ant: rnd() < 0.25 });
+            x += w + 6 + ((rnd() * 26) | 0);
+          }
+          layers.push({ ...c, b });
+        });
+      }
+      function drawCity(scroll, t) {
+        ctx.clearRect(0, 0, W, H);
+        ctx.fillStyle = "#031311";
+        ctx.fillRect(0, 0, W, H);
+        layers.forEach((L) => {
+          const off = (scroll * L.speed) % (W + 120);
+          for (const pass of [0, 1]) {
+            const px = pass ? W + 120 : 0;
+            L.b.forEach((bd) => {
+              const bx =
+                ((bd.x - off + W + 120) % (W + 120)) - 60 - 0 + (pass ? 0 : 0);
+              const by = H - bd.h;
+              ctx.fillStyle = L.col;
+              ctx.fillRect(bx | 0, by | 0, bd.w, bd.h);
+              if (bd.ant)
+                ctx.fillRect((bx + bd.w / 2) | 0, (by - 14) | 0, 3, 14);
+              ctx.fillStyle = L.win;
+              bd.wins.forEach(([wx, wy]) =>
+                ctx.fillRect((bx + wx) | 0, (by + wy) | 0, 5, 7),
+              );
+            });
+          }
+        });
+        ctx.fillStyle = "rgba(59,232,216,.22)";
+        const rr = mulberry(7);
+        for (let i = 0; i < 110; i++) {
+          const rx = rr() * W,
+            sp = 60 + rr() * 120,
+            ph = rr() * H;
+          const y = (ph + t * 0.06 * sp) % H;
+          ctx.fillRect(rx | 0, y | 0, 2, 9);
+        }
+        const g = ctx.createLinearGradient(0, H * 0.5, 0, H);
+        g.addColorStop(0, "rgba(3,19,17,0)");
+        g.addColorStop(1, "rgba(3,19,17,.8)");
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      /* ================= SCROLL ENGINE ================= */
+      const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+      const lerp = (a, b, t) => a + (b - a) * t;
+      const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const evEls = EVENTS.map((_, i) => document.getElementById("ev" + i));
+      const cellsEl = document.getElementById("cells");
+      const NCELLS = 18;
+      for (let i = 0; i < NCELLS; i++)
+        cellsEl.appendChild(document.createElement("i"));
+      const cellNodes = [...cellsEl.children];
+      const pctEl = document.getElementById("pct"),
+        hudYear = document.getElementById("hudyear");
+      const topbar = document.getElementById("topbar");
+
+      /* one-shot reveal */
+      const io = new IntersectionObserver(
+        (es) => {
+          es.forEach((e) => {
+            if (e.isIntersecting) {
+              e.target.classList.add("vis");
+              io.unobserve(e.target);
+            }
+          });
+        },
+        { threshold: 0.12 },
+      );
+      evEls.forEach((el) => io.observe(el));
+
+      /* leaderboard bars fill once visible */
+      const iob = new IntersectionObserver(
+        (es) => {
+          es.forEach((e) => {
+            if (e.isIntersecting) {
+              e.target
+                .querySelectorAll(".bar i")
+                .forEach((b) => (b.style.width = b.dataset.w * 2.6 + "%"));
+              iob.unobserve(e.target);
+            }
+          });
+        },
+        { threshold: 0.3 },
+      );
+      iob.observe(document.getElementById("board"));
+
+      function state() {
+        const vh = innerHeight,
+          mark = vh * 0.62;
+        let year = Y0,
+          prob = 0,
+          active = -1;
+        let prevY = Y0,
+          prevP = 0;
+        EVENTS.forEach((e, i) => {
+          const r = evEls[i].getBoundingClientRect();
+          const t = clamp((mark - r.top) / (r.height * 0.9), 0, 1);
+          if (t > 0) {
+            year = lerp(prevY === Y0 && i === 0 ? Y0 : prevY, e.yf, t);
+            prob = lerp(prevP, e.p, t);
+            if (t > 0.35) active = i;
+          }
+          if (t >= 1) {
+            prevY = e.yf;
+            prevP = e.p;
+          }
+        });
+        const fin = document.getElementById("finale").getBoundingClientRect();
+        const ft = clamp((vh - fin.top) / (vh * 0.9), 0, 1);
+        if (ft > 0) prob = lerp(prob, 100, ft);
+        return { year, prob, active, ft };
+      }
+      function update() {
+        const { year, prob, active, ft } = state();
+        hudYear.textContent = ft > 0.7 ? "????" : Math.floor(year);
+        pctEl.textContent = prob.toFixed(1) + "%";
+        pctEl.className = prob >= 40 ? "red" : prob >= 12 ? "warn" : "";
+        const lit = Math.round((prob / 100) * NCELLS);
+        cellNodes.forEach((c, i) => {
+          c.className =
+            i < lit
+              ? "on " +
+                (i >= NCELLS * 0.5 ? "red" : i >= NCELLS * 0.18 ? "warn" : "")
+              : "";
+        });
+        /* rail */
+        const frac = clamp(railFrac(year), 0, 1);
+        railfill.style.height = Math.max(0, railPx(frac) - 6) + "px";
+        railpv.textContent = prob.toFixed(1) + "%";
+        railpv.style.color =
+          prob >= 40 ? "var(--red)" : prob >= 12 ? "var(--warn)" : "var(--hi)";
+        rail
+          .querySelectorAll(".dot")
+          .forEach((d) =>
+            d.classList.toggle("active", +d.dataset.i === active),
+          );
+        /* mobile top progress */
+        const doc = document.documentElement;
+        topbar.style.width =
+          (scrollY / (doc.scrollHeight - innerHeight)) * 100 + "%";
+      }
+      let last = 0;
+      function loop(t) {
+        drawCity(scrollY, reduced ? 0 : t / 16);
+        requestAnimationFrame(loop);
+      }
+      addEventListener("scroll", () => update(), { passive: true });
+      addEventListener("resize", () => {
+        buildCity();
+        buildRail();
+        update();
+      });
+      buildCity();
+      buildRail();
+      update();
+      requestAnimationFrame(loop);
+    </script>
+  </body>
+</html>
